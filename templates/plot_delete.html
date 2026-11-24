@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Delete Coffee Plot | Coffee Production{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Delete coffee plot</h1>
+<div class="card">
+    <div class="card-body">
+        <p>Delete plot <strong>{{ plot.name }}</strong>? This action is permanent.</p>
+        <form method="post" class="d-flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <input type="hidden" name="plot_name" value="{{ plot.name }}">
+            <button class="btn btn-danger" type="submit">Delete plot</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('plots') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

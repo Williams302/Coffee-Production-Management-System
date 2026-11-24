@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Production | Coffee Production{% endblock %}
+{% block scripts %}{% include "_harvest_chart_scripts.html" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h1 class="mb-0">Production / Harvests</h1>
+    <a class="btn btn-success plot-primary" href="{{ url_for('harvest_form') }}">Add harvest</a>
+</div>
+
+<section class="card mb-3">
+    <div class="card-body">
+        {% if errors %}
+        <ul class="alert alert-danger" role="alert">
+            {% for error in errors %}<li class="ms-3">{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        <form method="get" class="row g-3 align-items-end" aria-label="Filter harvests">
+            {% for field, label, choices in [
+                ('plot_id', 'Coffee plot', plots),
+                ('coffee_form', 'Coffee form', coffee_forms),
+                ('season', 'Production season', seasons)
+            ] %}
+            <div class="col-sm-6 col-lg">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <select class="form-select" id="filter-{{ field }}" name="{{ field }}">
+                    <option value="">All</option>
+                    {% for choice in choices %}
+                    {% set value = choice.id | string if field == 'plot_id' else choice %}
+                    <option value="{{ value }}"{% if filters[field] == value %} selected{% endif %}>{{ choice.name if field == 'plot_id' else choice }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+            {% for field, label in [('start_date', 'Start date'), ('end_date', 'End date')] %}
+            <div class="col-sm-6 col-lg">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <input class="form-control" type="date" id="filter-{{ field }}" name="{{ field }}" value="{{ filters[field] }}">
+            </div>
+            {% endfor %}
+            <div class="col-auto d-flex gap-2">
+                <button class="btn btn-outline-success" type="submit">Filter</button>
+                {% if filters.values() | select | list %}
+                <a class="btn btn-outline-secondary" href="{{ url_for('harvests') }}">Clear filters</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if not errors %}
+<section class="card mb-3">
+    <div class="card-body">
+        <h2 class="section-title">Harvest records</h2>
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        {% for label in ['Plot', 'Variety', 'Date', 'Coffee form', 'Weight (kg)', 'Season', 'Actions'] %}
+                        <th scope="col">{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <th scope="row">{{ record.plot_name }}</th>
+                        <td>{{ record.variety or 'Unspecified' }}</td>
+                        <td><time datetime="{{ record.harvest_date }}">{{ record.harvest_date }}</time></td>
+                        <td>{{ record.coffee_form or 'Unclassified' }}</td>
+                        <td>{{ '{:,.10g}'.format(record.weight_kg) }}</td>
+                        <td>{{ record.season or 'Unspecified' }}</td>
+                        <td class="text-nowrap">
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('harvest_form', harvest_id=record.id) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('delete_harvest', harvest_id=record.id) }}">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-body-secondary mb-0">{{ 'No harvests match your filters.' if filters.values() | select | list else 'No harvests recorded yet.' }}</p>
+        {% endif %}
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="section-title">Production by plot, season and form</h2>
+                {% if summaries %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Plot</th>
+                                <th scope="col">Season</th>
+                                <th scope="col">Coffee form</th>
+                                <th scope="col">Weight (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for (plot, season, form), weight in summaries.items() %}
+                            <tr>
+                                <th scope="row">{{ plot }}</th>
+                                <td>{{ season or 'Unspecified' }}</td>
+                                <td>{{ form or 'Unclassified' }}</td>
+                                <td>{{ '{:,.10g}'.format(weight) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-body-secondary mb-0">No production totals for this selection.</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-7">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="section-title">Daily production trend</h2>
+                {% include "_harvest_chart.html" %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

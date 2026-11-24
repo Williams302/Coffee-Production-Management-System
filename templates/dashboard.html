@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Coffee Production{% endblock %}
+
+{% block scripts %}{% include "_harvest_chart_scripts.html" %}{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Farm dashboard</h1>
+
+<div class="row row-cols-1 row-cols-sm-2 g-3 mb-4">
+    {% for label, value in [
+        ('Coffee plots', totals.plots),
+        ('Recorded activities', totals.activities)
+    ] %}
+    <div class="col">
+        <section class="card summary-card h-100">
+            <div class="card-body">
+                <h2 class="metric-label">{{ label }}</h2>
+                <p class="metric-value mb-0">{{ value }}</p>
+            </div>
+        </section>
+    </div>
+    {% endfor %}
+</div>
+
+<section class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+            <h2 class="section-title">Sales summary</h2>
+            <a href="{{ url_for('sales') }}">View sales</a>
+        </div>
+        <dl class="row row-cols-1 row-cols-sm-3 g-2 mb-0">
+            {% for label, amount in [('Total sales value', sales_totals.value),
+                    ('Amount received', sales_totals.received), ('Outstanding balance', sales_totals.outstanding)] %}
+            <div class="col">
+                <dt>{{ label }}</dt>
+                <dd class="metric-value mb-0">UGX {{ '{:,}'.format(amount) }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+        {% if sales_totals.unknown %}
+        <p class="text-body-secondary small mb-0 mt-2">
+            Sales with unknown payments ({{ sales_totals.unknown }}) contribute to total sales value only.
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+            <h2 class="section-title">Latest recorded market price</h2>
+            <a href="{{ url_for('market_prices') }}">View market prices</a>
+        </div>
+        {% if latest_price %}
+        <p class="metric-value mb-1">UGX {{ '{:,}'.format(latest_price.price_ugx_per_kg) }} / kg</p>
+        <p class="mb-0">{{ latest_price.coffee_type }} · {{ latest_price.coffee_form }} · {{ latest_price.market }}
+            · <time datetime="{{ latest_price.price_date }}">{{ latest_price.price_date }}</time></p>
+        {% else %}
+        <p class="text-body-secondary mb-0">No market prices with a recorded coffee form yet.</p>
+        {% endif %}
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="section-title">Harvest weight by form</h2>
+                <dl class="row row-cols-2 row-cols-sm-3 g-2 mb-3">
+                    {% for form, weight in production_by_form %}
+                    <div class="col">
+                        <dt>{{ form }}</dt>
+                        <dd class="mb-0">{{ '{:,.10g}'.format(weight) }} kg</dd>
+                    </div>
+                    {% endfor %}
+                </dl>
+                <p class="text-body-secondary">Daily trend · Last 7 days</p>
+                {% include "_harvest_chart.html" %}
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="section-title">Recent activities</h2>
+                {% if activities %}
+                <ul class="list-group list-group-flush">
+                    {% for activity in activities %}
+                    <li class="list-group-item px-0">
+                        <div class="fw-semibold">{{ activity.activity_label | capitalize if activity.activity_type else activity.activity_label }}</div>
+                        <div class="small text-body-secondary">
+                            {{ activity.plot_name }} · <time datetime="{{ activity.activity_date }}">{{ activity.activity_date }}</time>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-body-secondary mb-0">No farm activities recorded yet.</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

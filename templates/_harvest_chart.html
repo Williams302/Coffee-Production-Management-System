@@ -1,0 +1,32 @@
+{% if chart_has_data %}
+<div class="chart-frame">
+    <canvas id="harvest-chart" role="img" aria-label="Daily harvest weight in kilograms by coffee form"
+            data-labels='{{ chart_labels | tojson }}' data-series='{{ chart_series | tojson }}'></canvas>
+</div>
+<details class="mt-2">
+    <summary>Daily weights by form (kg)</summary>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    {% for series in chart_series %}<th scope="col">{{ series.label }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in chart_labels %}
+                {% set day_index = loop.index0 %}
+                <tr>
+                    <th scope="row">{{ day }}</th>
+                    {% for series in chart_series %}
+                    <td>{{ '{:,.10g}'.format(series.data[day_index]) if series.data[day_index] is not none else 'Too large to chart' }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% else %}
+<p class="text-body-secondary mb-0">No harvests recorded for this period.</p>
+{% endif %}

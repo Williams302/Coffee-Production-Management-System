@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Delete Market Price | Coffee Production{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Delete market price</h1>
+<div class="card">
+    <div class="card-body">
+        <p>Delete the <strong>UGX {{ '{:,}'.format(record.price_ugx_per_kg) }} / kg</strong> price
+            for {{ record.coffee_type }} {{ record.coffee_form or '(unclassified)' }}
+            from <strong>{{ record.market }}</strong> on {{ record.price_date }}? This action is permanent.</p>
+        <form method="post" class="d-flex flex-wrap gap-2">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <button class="btn btn-danger" type="submit">Delete market price</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('market_prices') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

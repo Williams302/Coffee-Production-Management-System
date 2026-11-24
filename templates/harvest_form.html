@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% set heading = 'Edit harvest' if harvest_id is not none else 'Add harvest' %}
+{% block title %}{{ heading }} | Coffee Production{% endblock %}
+{% block scripts %}<script defer src="{{ url_for('static', filename='js/harvest-form.js') }}"></script>{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ heading }}</h1>
+<div class="card">
+    <div class="card-body">
+        {% if not plots %}
+        <p class="mb-0">Register a <a href="{{ url_for('plot_form') }}">coffee plot</a> before adding a harvest.</p>
+        {% else %}
+        {% if errors %}
+        <p class="alert alert-danger" role="alert">Review the highlighted fields and try again.</p>
+        {% endif %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <div class="row g-3">
+                {% for field, label, type in [
+                    ('plot_id', 'Coffee plot', 'select'),
+                    ('harvest_date', 'Harvest date', 'date'),
+                    ('coffee_form', 'Coffee form', 'select'),
+                    ('weight_kg', 'Weight (kg)', 'number'),
+                    ('season', 'Production season', 'text'),
+                    ('notes', 'Notes (optional)', 'textarea')
+                ] %}
+                {% set value = values.get(field) if values.get(field) is not none else '' %}
+                {% set invalid = ' is-invalid' if field in errors else '' %}
+                <div class="{{ 'col-12' if field == 'notes' else 'col-md-6' }}">
+                    <label class="form-label" for="{{ field }}">{{ label }}</label>
+                    {% if type == 'select' %}
+                    <select class="form-select{{ invalid }}" id="{{ field }}" name="{{ field }}" required
+                            {% if field in errors %}aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
+                        {% if field == 'plot_id' %}
+                        <option value="">Choose a plot</option>
+                        {% for plot in plots %}
+                        <option value="{{ plot.id }}" data-variety="{{ plot.variety or 'Unspecified' }}"{% if value | string == plot.id | string %} selected{% endif %}>{{ plot.name }} · {{ plot.variety or 'Unspecified' }}</option>
+                        {% endfor %}
+                        {% else %}
+                        <option value="">Choose a form</option>
+                        {% for form in coffee_forms %}
+                        <option value="{{ form }}"{% if value == form %} selected{% endif %}>{{ form }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% elif type == 'textarea' %}
+                    <textarea class="form-control{{ invalid }}" name="{{ field }}" id="{{ field }}" rows="3" maxlength="2000"
+                              {% if field in errors %}aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ value }}</textarea>
+                    {% else %}
+                    <input class="form-control{{ invalid }}" type="{{ type }}" id="{{ field }}" name="{{ field }}"
+                           value="{{ value }}" required
+                           {% if field == 'weight_kg' %}min="0" step="any"{% endif %}
+                           {% if field == 'season' %}maxlength="80"{% endif %}
+                           {% if field in errors %}aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
+                    {% endif %}
+                    {% if field in errors %}
+                    <div id="{{ field }}-error" class="invalid-feedback">{{ errors[field] }}</div>
+                    {% endif %}
+                    {% if field == 'plot_id' %}
+                    <p class="form-text mb-0">Coffee variety <output id="plot-variety" for="plot_id">{{ (selected_plot.variety or 'Unspecified') if selected_plot else 'Choose a plot' }}</output></p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <button class="btn btn-success plot-primary" type="submit">Save harvest</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('harvests') }}">Cancel</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

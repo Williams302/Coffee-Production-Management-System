@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Reports and Analytics | Coffee Production{% endblock %}
+{% block scripts %}
+{% if not printing %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script defer src="{{ url_for('static', filename='js/market-price-chart.js') }}"></script>
+{% endif %}
+<script defer src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    {% if printing %}<p class="fw-semibold mb-1">Coffee Production Management System</p>{% endif %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h1 class="mb-0">Reports and Analytics</h1>
+        {% if not errors %}
+        <div class="report-controls d-flex gap-2">
+            {% if printing %}
+            <a class="btn btn-outline-secondary" href="{{ url_for('reports', **filters) }}">Back to reports</a>
+            <button class="btn btn-success plot-primary" type="button" id="print-report">Print</button>
+            {% else %}
+            <a class="btn btn-outline-secondary" href="{{ url_for('print_reports', **filters) }}">Print view</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if not printing %}
+    <section class="card report-controls mb-4">
+        <div class="card-body">
+            {% if errors %}
+            <ul class="alert alert-danger" role="alert">
+                {% for error in errors %}<li class="ms-3">{{ error }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            <form method="get" action="{{ url_for('reports') }}" class="row g-3 align-items-end" aria-label="Filter reports">
+                <div class="col-sm-6 col-lg">
+                    <label class="form-label" for="report-period">Reporting period</label>
+                    <select class="form-select" id="report-period" name="period">
+                        {% for value, label in [('all', 'All dates'), ('daily', 'Daily'), ('weekly', 'Weekly (Mon–Sun)'), ('custom', 'Custom range')] %}
+                        <option value="{{ value }}"{% if filters.period == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% for field, label, mode in [('date', 'Day or date within week', 'anchor'),
+                    ('start_date', 'Start date', 'range'), ('end_date', 'End date', 'range')] %}
+                <div class="col-sm-6 col-lg" data-report-date="{{ mode }}">
+                    <label class="form-label" for="report-{{ field }}">{{ label }}</label>
+                    <input class="form-control" id="report-{{ field }}" name="{{ field }}" type="date" value="{{ filters[field] }}">
+                </div>
+                {% endfor %}
+                <div class="col-sm-6 col-lg">
+                    <label class="form-label" for="report-season">Production season</label>
+                    <select class="form-select" id="report-season" name="season">
+                        <option value="">All seasons</option>
+                        {% for season in seasons %}
+                        <option value="{{ season }}"{% if filters.season == season %} selected{% endif %}>{{ season }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <button class="btn btn-outline-success" type="submit">Apply filters</button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('reports') }}">Clear</a>
+                </div>
+            </form>
+        </div>
+    </section>
+    {% elif errors %}
+    <ul class="alert alert-danger" role="alert">
+        {% for error in errors %}<li class="ms-3">{{ error }}</li>{% endfor %}
+    </ul>
+    <a href="{{ url_for('reports') }}">Back to report filters</a>
+    {% endif %}
+
+    {% if not errors %}
+    <p class="mb-1"><strong>Reporting period</strong> {{ period_label }}</p>
+    <p class="text-body-secondary mb-3">
+        Production season {{ filters.season or 'All seasons' }} · Generated {{ generated }} (Kampala)
+    </p>
+
+    <section class="mb-4">
+        <h2 class="section-title">Recorded totals</h2>
+        <div class="row row-cols-2 row-cols-lg-4 g-2">
+            {% for form, weight in summary.production.items() %}
+            <div class="col">
+                <div class="card summary-card h-100">
+                    <div class="card-body p-3">
+                        <h3 class="metric-label">{{ form }} production</h3>
+                        <p class="metric-value mb-0">{{ '{:,.10g}'.format(weight) }} kg</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% for label, value in [('Total sales value', summary.sales.value), ('Payments received', summary.sales.received),
+                ('Outstanding balances', summary.sales.outstanding), ('Farm activity expenditure', summary.costs)] %}
+            <div class="col">
+                <div class="card summary-card h-100">
+                    <div class="card-body p-3">
+                        <h3 class="metric-label">{{ label }}</h3>
+                        <p class="metric-value mb-0">UGX {{ '{:,}'.format(value) }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if not printing %}
+    <section class="mb-4">
+        <h2 class="section-title">Trends and breakdowns</h2>
+        <div class="row row-cols-1 row-cols-lg-2 g-3">
+            {% for chart in charts %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="section-title">{{ chart.title }}</h3>
+                        {% if chart.labels %}
+                        <div class="chart-frame">
+                            <canvas role="img" aria-label="{{ chart.title }} in {{ chart.yTitle }}"
+                                    data-report-chart='{{ chart | tojson }}'></canvas>
+                        </div>
+                        <noscript>See the report tables for recorded values.</noscript>
+                        {% else %}
+                        <p class="text-body-secondary mb-0">No records with chartable values for this selection.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            <div class="col col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-title">Market price trends</h3>
+                        {% if market_series %}
+                        <p class="text-body-secondary">Separate lines for each market, variety and coffee form.</p>
+                        <div class="chart-frame">
+                            <canvas id="market-price-chart" role="img" aria-label="Market prices in UGX per kilogram"
+                                    data-series='{{ market_series | tojson }}'></canvas>
+                        </div>
+                        <noscript>See the Market Price Report for recorded values.</noscript>
+                        {% else %}
+                        <p class="text-body-secondary mb-0">No prices with a recorded coffee form for this period.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% for key, title in titles.items() %}
+    <section class="card report-section mb-3" id="{{ key }}-report">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <h2 class="section-title mb-0">{{ title }}</h2>
+                {% if not printing %}
+                <a class="btn btn-sm btn-outline-success report-controls"
+                   href="{{ url_for('export_report', report_name=key, **filters) }}">Download CSV<span class="visually-hidden"> for {{ title }}</span></a>
+                {% endif %}
+            </div>
+            {% if key == 'production' %}
+            <p class="text-body-secondary">Quantities are reported separately because coffee forms can represent successive processing stages.</p>
+            {% elif key == 'market-prices' %}
+            <p class="text-body-secondary">The benchmark is the latest matching variety and form on or before each sale dated in the period. A benchmark may predate the reporting period.</p>
+            {% elif key == 'performance' %}
+            <p class="text-body-secondary">The limited operating margin estimate subtracts recorded activity costs from sales value.
+                Other expenses may be missing. Payments are attributed to the sale date.</p>
+            {% endif %}
+            {% for item in sections[key] %}
+            <h3 class="metric-label mt-3">{{ item.title }}</h3>
+            {% if item.rows %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr>{% for column in item.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+                    <tbody>
+                        {% for row in item.rows %}
+                        <tr>
+                            {% for value in row %}
+                            <td>{{ '—' if value is none else '{:,}'.format(value) if value is number else value }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-body-secondary mb-0">
+                {{ 'No comparable market prices for sales in this period.' if item.title == 'Comparable sale prices' else 'No recorded data for this selection.' }}
+            </p>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

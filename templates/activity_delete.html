@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Delete Farm Activity | Coffee Production{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Delete farm activity</h1>
+<div class="card">
+    <div class="card-body">
+        <p>Delete <strong>{{ record.activity_type | capitalize if record.activity_type else record.description }}</strong>
+            for plot <strong>{{ record.plot_name }}</strong> on {{ record.activity_date }}? This action is permanent.</p>
+        <form method="post" class="d-flex flex-wrap gap-2">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <button class="btn btn-danger" type="submit">Delete activity</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('activities') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

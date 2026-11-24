@@ -1,0 +1,149 @@
+:root {
+    --forest: #214536;
+    --leaf: #35644d;
+    --coffee: #593d2e;
+    --cream: #f7f2e8;
+    --border: #dfd6c7;
+}
+
+body {
+    background: var(--cream);
+    color: var(--coffee);
+    min-height: 100vh;
+}
+
+.site-header {
+    background: var(--forest);
+}
+
+.site-header a {
+    color: #fff8eb;
+    text-decoration: none;
+}
+
+.site-header a:hover {
+    text-decoration: underline;
+}
+
+.brand {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.nav-page {
+    border-radius: .5rem;
+    padding: .5rem .85rem;
+}
+
+.nav-page[aria-current="page"] {
+    background: var(--leaf);
+}
+
+.plot-primary {
+    --bs-btn-bg: var(--leaf);
+    --bs-btn-border-color: var(--leaf);
+    --bs-btn-hover-bg: var(--forest);
+    --bs-btn-hover-border-color: var(--forest);
+}
+
+h1, .section-title {
+    color: var(--forest);
+    font-weight: 700;
+}
+
+.section-title {
+    font-size: 1.2rem;
+}
+
+.card {
+    --bs-card-bg: #fffdf8;
+    --bs-card-border-color: var(--border);
+    --bs-card-spacer-x: 1.25rem;
+    --bs-card-spacer-y: 1.25rem;
+}
+
+.summary-card {
+    border-top: 3px solid var(--leaf);
+}
+
+.metric-label {
+    color: var(--coffee);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.metric-value {
+    color: var(--forest);
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.chart-frame {
+    display: none;
+    height: 16rem;
+    position: relative;
+}
+
+.chart-frame.is-ready {
+    display: block;
+}
+
+.list-group-item {
+    background: transparent;
+    border-color: var(--border);
+    overflow-wrap: anywhere;
+}
+
+.reports-page td, .reports-page th {
+    overflow-wrap: anywhere;
+}
+
+@media print {
+    @page coffee-reports {
+        size: landscape;
+        margin: 12mm;
+    }
+
+    .reports-page {
+        page: coffee-reports;
+    }
+
+    body:has(.reports-page) {
+        background: white;
+        color: black;
+        font-size: 10pt;
+    }
+
+    body:has(.reports-page) .site-header,
+    .reports-page .report-controls,
+    .reports-page .chart-frame {
+        display: none !important;
+    }
+
+    body:has(.reports-page) main {
+        max-width: none;
+        padding: 0 !important;
+    }
+
+    .reports-page .card {
+        background: white;
+        color: black;
+    }
+
+    .reports-page .table-responsive {
+        overflow: visible;
+    }
+
+    .reports-page thead {
+        display: table-header-group;
+    }
+
+    .reports-page tr, .reports-page .summary-card {
+        break-inside: avoid;
+    }
+
+    .reports-page h2, .reports-page h3 {
+        break-after: avoid;
+    }
+}

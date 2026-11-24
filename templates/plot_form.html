@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set heading = 'Edit coffee plot' if plot_id is not none else 'Add coffee plot' %}
+{% block title %}{{ heading }} | Coffee Production{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ heading }}</h1>
+<div class="card">
+    <div class="card-body">
+        {% if errors %}
+        <p class="alert alert-danger" role="alert">Review the highlighted fields and try again.</p>
+        {% endif %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <div class="row g-3">
+                {% for field, label, type in [
+                    ('name', 'Plot identification number', 'text'),
+                    ('variety', 'Coffee variety', 'select'),
+                    ('tree_count', 'Number of trees', 'number'),
+                    ('planting_date', 'Planting date', 'date'),
+                    ('location', 'Location', 'text'),
+                    ('area_hectares', 'Plot area (hectares)', 'number')
+                ] %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ field }}">{{ label }}</label>
+                    {% if type == 'select' %}
+                    <select class="form-select{% if field in errors %} is-invalid{% endif %}"
+                            id="{{ field }}" name="{{ field }}" required
+                            {% if field in errors %}aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
+                        <option value="">Choose a variety</option>
+                        {% for variety in varieties %}
+                        <option{% if values.get(field) == variety %} selected{% endif %}>{{ variety }}</option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <input class="form-control{% if field in errors %} is-invalid{% endif %}"
+                           type="{{ type }}" id="{{ field }}" name="{{ field }}"
+                           value="{{ values.get(field) if values.get(field) is not none else '' }}" required
+                           {% if field == 'tree_count' %}min="1" step="1"{% endif %}
+                           {% if field == 'area_hectares' %}min="0" step="any"{% endif %}
+                           {% if field in errors %}aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
+                    {% endif %}
+                    {% if field in errors %}
+                    <div id="{{ field }}-error" class="invalid-feedback">{{ errors[field] }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-success plot-primary">Save plot</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('plots') }}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

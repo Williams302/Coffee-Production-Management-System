@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Market Prices | Coffee Production{% endblock %}
+{% block scripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script defer src="{{ url_for('static', filename='js/market-price-chart.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h1 class="mb-0">Market prices</h1>
+    <a class="btn btn-success plot-primary" href="{{ url_for('market_price_form') }}">Add market price</a>
+</div>
+
+<section class="card mb-3">
+    <div class="card-body">
+        {% if errors %}
+        <ul class="alert alert-danger" role="alert">
+            {% for error in errors %}<li class="ms-3">{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        <form method="get" class="row g-3 align-items-end" aria-label="Filter market prices">
+            {% for field, label, options in [
+                ('market', 'Market or source', markets), ('coffee_type', 'Variety', varieties),
+                ('coffee_form', 'Coffee form', coffee_forms)
+            ] %}
+            <div class="col-sm-6 col-lg">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <select class="form-select" id="filter-{{ field }}" name="{{ field }}">
+                    <option value="">All</option>
+                    {% for option in options %}
+                    <option value="{{ option }}"{% if filters[field] == option %} selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+            {% for field, label in [('start_date', 'Start date'), ('end_date', 'End date')] %}
+            <div class="col-sm-6 col-lg">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <input class="form-control" type="date" id="filter-{{ field }}" name="{{ field }}" value="{{ filters[field] }}">
+            </div>
+            {% endfor %}
+            <div class="col-auto d-flex gap-2">
+                <button class="btn btn-outline-success" type="submit">Filter</button>
+                {% if filters.values() | select | list %}
+                <a class="btn btn-outline-secondary" href="{{ url_for('market_prices') }}">Clear filters</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if not errors %}
+<section class="card mb-3">
+    <div class="card-body">
+        <h2 class="section-title">Manually recorded prices</h2>
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        {% for label in ['Date', 'Variety', 'Coffee form', 'Price (UGX/kg)', 'Market or source', 'Notes', 'Actions'] %}
+                        <th scope="col">{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.price_date }}</td>
+                        <td>{{ record.coffee_type }}</td>
+                        <td>{{ record.coffee_form or 'Unclassified' }}</td>
+                        <td>{{ '{:,}'.format(record.price_ugx_per_kg) }}</td>
+                        <th scope="row">{{ record.market }}</th>
+                        <td class="text-break">{{ record.notes or '—' }}</td>
+                        <td class="text-nowrap">
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('market_price_form', price_id=record.id) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('delete_market_price', price_id=record.id) }}">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-body-secondary mb-0">{{ 'No market prices match your filters.' if filters.values() | select | list else 'No market prices recorded yet.' }}</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card mb-3">
+    <div class="card-body">
+        <h2 class="section-title">Market price trends</h2>
+        {% if chart_series %}
+        <p class="text-body-secondary">Each line represents one source, variety and coffee form. Exact values are in the table above.</p>
+        <div class="chart-frame">
+            <canvas id="market-price-chart" role="img" aria-label="Market price trends in UGX per kilogram"
+                    data-series='{{ chart_series | tojson }}'></canvas>
+        </div>
+        {% else %}
+        <p class="text-body-secondary mb-0">No prices with a recorded coffee form to chart for this selection.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-body">
+        <h2 class="section-title">Sales compared with market prices</h2>
+        <p class="text-body-secondary">Each sale uses the latest price for the same variety and form on or before its sale date.
+            The source filter applies to comparisons. The other filters apply to the price table and chart.
+            Difference = sale unit price minus market price.</p>
+        {% if comparisons %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        {% for label in ['Sale date', 'Plot', 'Buyer', 'Variety', 'Coffee form',
+                            'Sale price (UGX/kg)', 'Market benchmark (UGX/kg)', 'Difference (UGX/kg)'] %}
+                        <th scope="col">{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in comparisons %}
+                    <tr>
+                        <td>{{ sale.sale_date }}</td>
+                        <th scope="row">{{ sale.plot_name }}</th>
+                        <td>{{ sale.buyer or 'Unknown' }}</td>
+                        <td>{{ sale.variety or 'Unspecified' }}</td>
+                        <td>{{ sale.coffee_form or 'Unclassified' }}</td>
+                        <td>{{ '{:,}'.format(sale.unit_price_ugx) if sale.unit_price_ugx is not none else '—' }}</td>
+                        {% if sale.difference_ugx is not none %}
+                        <td>{{ '{:,}'.format(sale.price_ugx_per_kg) }}
+                            <div class="small text-body-secondary">{{ sale.market }} · {{ sale.price_date }}</div>
+                        </td>
+                        <td class="{{ 'text-success' if sale.difference_ugx > 0 else 'text-danger' if sale.difference_ugx < 0 else '' }}">
+                            {{ '{:+,}'.format(sale.difference_ugx) if sale.difference_ugx else '0' }}
+                        </td>
+                        {% else %}
+                        <td colspan="2">No comparable market price</td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-body-secondary mb-0">No sales recorded yet.</p>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

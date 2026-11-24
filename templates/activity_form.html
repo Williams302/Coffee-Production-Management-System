@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% set heading = 'Edit farm activity' if record else 'Add farm activity' %}
+{% block title %}{{ heading }} | Coffee Production{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ heading }}</h1>
+<div class="card">
+    <div class="card-body">
+        {% if not plot_options %}
+        <p class="mb-0">Register a <a href="{{ url_for('plot_form') }}">coffee plot</a> before adding an activity.</p>
+        {% else %}
+        {% if errors %}
+        <p class="alert alert-danger" role="alert">Review the highlighted fields and try again.</p>
+        {% endif %}
+        {% if record and record.description not in activity_types %}
+        <p>Original description: {{ record.description }}</p>
+        {% endif %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <div class="row g-3">
+                {% for field, label, type in [
+                    ('plot_id', 'Coffee plot', 'select'),
+                    ('activity_type', 'Activity type', 'select'),
+                    ('activity_date', 'Activity date', 'date'),
+                    ('inputs_used', 'Inputs used', 'text'),
+                    ('quantity', 'Quantity', 'number'),
+                    ('unit', 'Unit', 'text'),
+                    ('cost_ugx', 'Cost (UGX)', 'number'),
+                    ('notes', 'Notes (optional)', 'textarea')
+                ] %}
+                {% set value = values.get(field) if values.get(field) is not none else '' %}
+                {% set invalid = ' is-invalid' if field in errors else '' %}
+                {% set feedback = ' aria-invalid=true aria-describedby=' ~ field ~ '-error' if invalid else '' %}
+                <div class="{{ 'col-12' if field == 'notes' else 'col-md-6' }}">
+                    <label class="form-label" for="{{ field }}">{{ label }}</label>
+                    {% if type == 'select' %}
+                    <select class="form-select{{ invalid }}" id="{{ field }}" name="{{ field }}" required{{ feedback }}>
+                        {% if field == 'plot_id' %}
+                        <option value="">Choose a plot</option>
+                        {% for plot in plot_options %}
+                        <option value="{{ plot.id }}"{% if value | string == plot.id | string %} selected{% endif %}>{{ plot.name }}</option>
+                        {% endfor %}
+                        {% else %}
+                        <option value="">Choose a type</option>
+                        {% for activity_type in activity_types %}
+                        <option value="{{ activity_type }}"{% if value == activity_type %} selected{% endif %}>{{ activity_type | capitalize }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% elif type == 'textarea' %}
+                    <textarea class="form-control{{ invalid }}" name="{{ field }}" id="{{ field }}" rows="3" maxlength="2000"{{ feedback }}>{{ value }}</textarea>
+                    {% else %}
+                    <input class="form-control{{ invalid }}" type="{{ type }}" id="{{ field }}" name="{{ field }}"
+                           value="{{ value }}" required{{ feedback }}
+                           {% if field == 'inputs_used' %}maxlength="200"{% endif %}
+                           {% if field == 'unit' %}maxlength="40"{% endif %}
+                           {% if field == 'quantity' %}min="0" step="any"{% endif %}
+                           {% if field == 'cost_ugx' %}min="0" step="1"{% endif %}>
+                    {% endif %}
+                    {% if field in errors %}
+                    <div id="{{ field }}-error" class="invalid-feedback">{{ errors[field] }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <button class="btn btn-success plot-primary" type="submit">Save activity</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('activities') }}">Cancel</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

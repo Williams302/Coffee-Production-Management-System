@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Sales | Coffee Production{% endblock %}
+{% block scripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script defer src="{{ url_for('static', filename='js/sales-chart.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h1 class="mb-0">Coffee sales</h1>
+    <a class="btn btn-success plot-primary" href="{{ url_for('sale_form') }}">Add sale</a>
+</div>
+
+<section class="card mb-3">
+    <div class="card-body">
+        {% if errors %}
+        <ul class="alert alert-danger" role="alert">
+            {% for error in errors %}<li class="ms-3">{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        <form method="get" class="row g-3 align-items-end" aria-label="Filter sales">
+            <div class="col-sm-6 col-lg-4">
+                <label class="form-label" for="search-sales">Search buyer or plot</label>
+                <input class="form-control" type="search" id="search-sales" name="q" value="{{ filters.q }}">
+            </div>
+            {% for field, label, choices in [
+                ('plot_id', 'Coffee plot', plots), ('coffee_form', 'Coffee form', coffee_forms),
+                ('payment_status', 'Payment status', statuses)
+            ] %}
+            <div class="col-sm-6 col-lg-{{ 4 if field == 'plot_id' else 2 }}">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <select class="form-select" id="filter-{{ field }}" name="{{ field }}">
+                    <option value="">All</option>
+                    {% for choice in choices %}
+                    {% set value = choice.id | string if field == 'plot_id' else choice %}
+                    <option value="{{ value }}"{% if filters[field] == value %} selected{% endif %}>{{ choice.name if field == 'plot_id' else choice }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+            {% for field, label in [('start_date', 'Start date'), ('end_date', 'End date')] %}
+            <div class="col-sm-6 col-lg-3">
+                <label class="form-label" for="filter-{{ field }}">{{ label }}</label>
+                <input class="form-control" type="date" id="filter-{{ field }}" name="{{ field }}" value="{{ filters[field] }}">
+            </div>
+            {% endfor %}
+            <div class="col-auto d-flex gap-2">
+                <button class="btn btn-outline-success" type="submit">Filter</button>
+                {% if filters.values() | select | list %}
+                <a class="btn btn-outline-secondary" href="{{ url_for('sales') }}">Clear filters</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if not errors %}
+<section class="card mb-3">
+    <div class="card-body">
+        <h2 class="section-title">Sales records</h2>
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        {% for label in ['Date', 'Plot', 'Coffee form', 'Buyer', 'Quantity (kg)', 'Price (UGX/kg)',
+                            'Total (UGX)', 'Received (UGX)', 'Balance (UGX)', 'Status', 'Actions'] %}
+                        <th scope="col">{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td><time datetime="{{ record.sale_date }}">{{ record.sale_date }}</time></td>
+                        <td>{{ record.plot_name }}</td>
+                        <td>{{ record.display_form or 'Unclassified' }}</td>
+                        <th scope="row">{{ record.buyer or 'Unknown' }}</th>
+                        <td>{{ quantity_text(record.quantity_grams, record.weight_kg) }}</td>
+                        {% for amount in [record.unit_price_ugx, record.revenue_ugx, record.received_ugx, record.balance] %}
+                        <td>{{ '{:,}'.format(amount) if amount is not none else '—' }}</td>
+                        {% endfor %}
+                        <td>{{ record.payment_status }}</td>
+                        <td class="text-nowrap">
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('sale_form', sale_id=record.id) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('delete_sale', sale_id=record.id) }}">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-body-secondary mb-0">{{ 'No sales match your filters.' if filters.values() | select | list else 'No sales recorded yet.' }}</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-body">
+        <h2 class="section-title">Daily sales value</h2>
+        {% if trend %}
+        <div class="chart-frame">
+            <canvas id="sales-chart" role="img" aria-label="Daily sales value in Ugandan shillings"
+                    data-trend='{{ chart_values | tojson }}'></canvas>
+        </div>
+        <details>
+            <summary>Daily sales values (UGX)</summary>
+            <table class="table table-sm mb-0">
+                <thead><tr><th scope="col">Sale date</th><th scope="col">Value (UGX)</th></tr></thead>
+                <tbody>
+                    {% for day, value in trend %}
+                    <tr><th scope="row">{{ day }}</th><td>{{ '{:,}'.format(value) }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
+        {% else %}
+        <p class="text-body-secondary mb-0">No sales values to chart for this selection.</p>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

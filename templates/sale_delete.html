@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Delete Sale | Coffee Production{% endblock %}
+{% block content %}
+<h1 class="mb-4">Delete sale</h1>
+<div class="card">
+    <div class="card-body">
+        <p>Delete the <strong>UGX {{ '{:,}'.format(record.revenue_ugx) }}</strong> sale
+            for plot <strong>{{ record.plot_name }}</strong> on {{ record.sale_date }}? This action is permanent.</p>
+        <form method="post" class="d-flex flex-wrap gap-2">
+            <input type="hidden" name="csrf_token" value="{{ plot_csrf_token() }}">
+            <button class="btn btn-danger" type="submit">Delete sale</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('sales') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
